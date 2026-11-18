@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Ancho de Banda · Source Engine</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --surface: #141b24;
+      --surface2: #1c2533;
+      --border: #2a3544;
+      --border-soft: #222b38;
+      --text: #f0f4f8;
+      --muted: #8896a8;
+      --muted2: #5c6b7e;
+      --accent: #60a5fa;
+      --accent-dim: rgba(96, 165, 250, 0.15);
+      --min: #34d399;
+      --min-dim: rgba(52, 211, 153, 0.12);
+      --min-border: rgba(52, 211, 153, 0.3);
+      --max: #fb923c;
+      --max-dim: rgba(251, 146, 60, 0.12);
+      --max-border: rgba(251, 146, 60, 0.3);
+      --player: #a78bfa;
+      --player-dim: rgba(167, 139, 250, 0.12);
+      --player-border: rgba(167, 139, 250, 0.3);
+      --var: #38bdf8;
+      --var-dim: rgba(56, 189, 248, 0.12);
+      --var-border: rgba(56, 189, 248, 0.3);
+      --input-bg: #0c1017;
+      --yellow: #fbbf24;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 100, 180, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 0%, rgba(52, 211, 153, 0.04), transparent),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(251, 146, 60, 0.04), transparent);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+      padding: 2rem 1.25rem 3.5rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 2.25rem; }
+    header .badge {
+      display: inline-block;
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent);
+      background: var(--accent-dim); border: 1px solid rgba(96, 165, 250, 0.25);
+      padding: 0.25rem 0.7rem; border-radius: 999px; margin-bottom: 0.85rem;
+    }
+    header h1 {
+      font-size: clamp(1.4rem, 4vw, 1.75rem); font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1.25;
+      background: linear-gradient(180deg, #fff 30%, #a8b8cc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.45rem; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border-soft);
+      border-radius: var(--radius); padding: 1.35rem 1.5rem;
+      margin-bottom: 1.15rem; box-shadow: var(--shadow);
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--border); }
+
+    .card h2 {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--muted2); margin-bottom: 1.1rem; font-weight: 650;
+    }
+    .card h2::before {
+      content: ""; width: 3px; height: 12px; border-radius: 2px;
+      background: var(--accent); flex-shrink: 0;
+    }
+    .card.h-player h2::before { background: var(--player); }
+    .card.h-var h2::before { background: var(--var); }
+
+    .inputs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.15rem;
+    }
+    @media (max-width: 560px) { .inputs { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: block; font-size: 0.78rem; font-weight: 500;
+      color: var(--muted); margin-bottom: 0.35rem;
+    }
+    .field .hint { font-size: 0.7rem; color: var(--muted2); margin-top: 0.3rem; }
+
+    .field input[type="number"] {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.6rem 0.85rem;
+      color: var(--yellow); font-size: 1.05rem; font-weight: 650;
+      font-variant-numeric: tabular-nums; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .field input[type="number"]:hover { border-color: #3a4a5e; background: #0e131c; }
+    .field input[type="number"]:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); background: #0e131c;
+    }
+
+    .results {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    @media (max-width: 560px) { .results { grid-template-columns: 1fr; } }
+
+    .result-box {
+      border-radius: 12px; padding: 1.2rem 1.3rem;
+      border: 1px solid transparent; position: relative; overflow: hidden;
+    }
+    .result-box::after {
+      content: ""; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px; opacity: 0.7;
+    }
+    .result-box.min { background: var(--min-dim); border-color: var(--min-border); }
+    .result-box.min::after { background: linear-gradient(90deg, transparent, var(--min), transparent); }
+    .result-box.max { background: var(--max-dim); border-color: var(--max-border); }
+    .result-box.max::after { background: linear-gradient(90deg, transparent, var(--max), transparent); }
+    .result-box.player { background: var(--player-dim); border-color: var(--player-border); }
+    .result-box.player::after { background: linear-gradient(90deg, transparent, var(--player), transparent); }
+    .result-box.var { background: var(--var-dim); border-color: var(--var-border); }
+    .result-box.var::after { background: linear-gradient(90deg, transparent, var(--var), transparent); }
+
+    .result-box .label {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+      font-weight: 650; margin-bottom: 0.3rem;
+    }
+    .result-box.min .label { color: var(--min); }
+    .result-box.max .label { color: var(--max); }
+    .result-box.player .label { color: var(--player); }
+    .result-box.var .label { color: var(--var); }
+
+    .result-box .combo {
+      font-size: 0.75rem; color: var(--muted2); margin-bottom: 0.7rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .result-box .value {
+      font-size: clamp(1.45rem, 4vw, 1.8rem); font-weight: 750;
+      font-variant-numeric: tabular-nums; line-height: 1.15; letter-spacing: -0.02em;
+    }
+    .result-box.min .value { color: var(--min); }
+    .result-box.max .value { color: var(--max); }
+    .result-box.player .value { color: var(--player); }
+    .result-box.var .value { color: var(--var); }
+
+    .result-box .per-player {
+      font-size: 0.82rem; color: var(--muted); margin-top: 0.45rem;
+    }
+    .result-box .fixed-units {
+      margin-top: 0.85rem; padding-top: 0.7rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.76rem; color: var(--muted2);
+      font-variant-numeric: tabular-nums; line-height: 1.5;
+    }
+
+    .sliders { display: flex; flex-direction: column; gap: 1.15rem; }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem 1rem;
+      align-items: center;
+    }
+    .slider-row label {
+      font-size: 0.8rem; font-weight: 500; color: var(--muted);
+      grid-column: 1;
+    }
+    .slider-row .val {
+      font-size: 0.9rem; font-weight: 700; color: var(--yellow);
+      font-variant-numeric: tabular-nums; text-align: right;
+      min-width: 5.5rem;
+    }
+    .slider-row input[type="range"] {
+      grid-column: 1 / -1;
+      width: 100%;
+      -webkit-appearance: none; appearance: none;
+      height: 6px; border-radius: 3px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); border: 2px solid #0b0f14;
+      box-shadow: 0 0 0 3px var(--accent-dim);
+      cursor: pointer; transition: transform 0.12s;
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+    }
+    .slider-row input[type="range"]::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); border: 2px solid #0b0f14;
+      box-shadow: 0 0 0 3px var(--accent-dim);
+      cursor: pointer;
+    }
+    .slider-row.player-theme input[type="range"]::-webkit-slider-thumb {
+      background: var(--player); box-shadow: 0 0 0 3px var(--player-dim);
+    }
+    .slider-row.player-theme input[type="range"]::-moz-range-thumb {
+      background: var(--player); box-shadow: 0 0 0 3px var(--player-dim);
+    }
+    .slider-row.var-theme input[type="range"]::-webkit-slider-thumb {
+      background: var(--var); box-shadow: 0 0 0 3px var(--var-dim);
+    }
+    .slider-row.var-theme input[type="range"]::-moz-range-thumb {
+      background: var(--var); box-shadow: 0 0 0 3px var(--var-dim);
+    }
+
+    .slider-bounds {
+      grid-column: 1 / -1;
+      display: flex; justify-content: space-between;
+      font-size: 0.68rem; color: var(--muted2); margin-top: -0.15rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .matrix-wrap {
+      overflow-x: auto; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-soft);
+    }
+    table.matrix {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.9rem; font-variant-numeric: tabular-nums;
+    }
+    table.matrix th, table.matrix td { padding: 0.75rem 1rem; text-align: center; }
+    table.matrix th {
+      background: var(--surface2); color: var(--muted2); font-weight: 650;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    table.matrix td { border-top: 1px solid var(--border-soft); }
+    table.matrix td:first-child {
+      text-align: left; font-weight: 600; color: var(--muted);
+      background: var(--surface2); font-size: 0.82rem; width: 28%;
+    }
+    table.matrix .cell-min { background: var(--min-dim); color: var(--min); font-weight: 700; }
+    table.matrix .cell-max { background: var(--max-dim); color: var(--max); font-weight: 700; }
+    table.matrix .cell-mid { color: var(--text); font-weight: 500; }
+
+    .formula {
+      font-size: 0.82rem; color: var(--muted);
+      background: var(--input-bg); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); padding: 1rem 1.15rem;
+      font-family: ui-monospace, "Cascadia Code", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+      line-height: 1.7; letter-spacing: 0.01em;
+    }
+    .formula .op { color: var(--accent); }
+    .formula .hl-min { color: var(--min); }
+    .formula .hl-max { color: var(--max); }
+
+    footer {
+      text-align: center; margin-top: 2.5rem;
+      font-size: 0.72rem; color: var(--muted2); letter-spacing: 0.02em;
+    }
+    footer span { opacity: 0.5; margin: 0 0.4rem; }
+
+    .section-note {
+      font-size: 0.75rem; color: var(--muted2); margin-top: 0.85rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Valve - Source Engine</div>
+      <h1>Calculadora de Ancho de Banda</h1>
+      <p></p>
+    </header>
+
+    <!-- SERVER CONFIG -->
+    <div class="card">
+      <h2>Configuración del servidor (límites)</h2>
+      <div class="inputs">
+        <div class="field">
+          <label for="minTick">Min Tick Rate</label>
+          <input type="number" id="minTick" value="64" min="1" step="1" />
+          <div class="hint">sv_minupdaterate</div>
+        </div>
+        <div class="field">
+          <label for="maxTick">Max Tick Rate</label>
+          <input type="number" id="maxTick" value="128" min="1" step="1" />
+          <div class="hint">sv_maxupdaterate / cl_updaterate</div>
+        </div>
+        <div class="field">
+          <label for="minRate">sv_minrate (bytes)</label>
+          <input type="number" id="minRate" value="2560" min="1" step="1" />
+          <div class="hint">packet size mínimo · 2560 = 2.5 KB</div>
+        </div>
+        <div class="field">
+          <label for="maxRate">sv_maxrate (bytes)</label>
+          <input type="number" id="maxRate" value="15360" min="1" step="1" />
+          <div class="hint">packet size máximo · 15360 = 15 KB</div>
+        </div>
+        <div class="field">
+          <label for="players">Jugadores en el servidor</label>
+          <input type="number" id="players" value="4" min="1" step="1" />
+          <div class="hint">para el consumo total del servidor</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="card h-player">
+      <h2>Consumo del jugador (cliente)</h2>
+      <p class="section-note" style="margin-top:-0.4rem;margin-bottom:1rem">
+        Los sliders están limitados por la config del servidor. El jugador elige rate y tickrate dentro de esos rangos.
+      </p>
+      <div class="sliders">
+        <div class="slider-row player-theme">
+          <label for="pTick">Tick rate del cliente</label>
+          <span class="val" id="pTickVal">128</span>
+          <input type="range" id="pTick" min="64" max="128" step="1" value="128" />
+          <div class="slider-bounds">
+            <span id="pTickMinLabel">64</span>
+            <span id="pTickMaxLabel">128</span>
+          </div>
+        </div>
+        <div class="slider-row player-theme">
+          <label for="pRate">Rate del cliente</label>
+          <span class="val" id="pRateVal">15,360</span>
+          <input type="range" id="pRate" min="2560" max="15360" step="64" value="15360" />
+          <div class="slider-bounds">
+            <span id="pRateMinLabel">2560</span>
+            <span id="pRateMaxLabel">15360</span>
+          </div>
+        </div>
+      </div>
+      <div class="results" style="margin-top:1.25rem">
+        <div class="result-box player" style="grid-column:1/-1">
+          <div class="label">Consumo de este jugador</div>
+          <div class="combo" id="pCombo">—</div>
+          <div class="value" id="pValue">—</div>
+          <div class="fixed-units" id="pFixed">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVER EXTREMES -->
+    <div class="card">
+      <h2>Consumo del servidor</h2>
+      <div class="results">
+        <div class="result-box min">
+          <div class="label">Consumo mínimo</div>
+          <div class="combo" id="srvMinCombo">—</div>
+          <div class="value" id="srvMinValue">—</div>
+          <div class="per-player" id="srvMinPerPlayer">—</div>
+          <div class="fixed-units" id="srvMinFixed">—</div>
+        </div>
+        <div class="result-box max">
+          <div class="label">Consumo máximo</div>
+          <div class="combo" id="srvMaxCombo">—</div>
+          <div class="value" id="srvMaxValue">—</div>
+          <div class="per-player" id="srvMaxPerPlayer">—</div>
+          <div class="fixed-units" id="srvMaxFixed">—</div>
+        </div>
+      </div>
+      <div class="matrix-wrap" style="margin-top:1rem">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Consumo (mín.)</th>
+              <th>Consumo (máx.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mín. Tickrate</td>
+              <td class="cell-min" id="m00">—</td>
+              <td class="cell-mid" id="m01">—</td>
+            </tr>
+            <tr>
+              <td>Max. Tickrate</td>
+              <td class="cell-mid" id="m10">—</td>
+              <td class="cell-max" id="m11">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="section-note">Mínimo = sv_minupdaterate × sv_minrate × N · Máximo = sv_maxupdaterate × sv_maxrate × N</p>
+    </div>
+
+    <!-- VARIABLE -->
+    <div class="card h-var">
+      <h2>Calculador variable (escenario)</h2>
+      <p class="section-note" style="margin-top:-0.4rem;margin-bottom:1rem">
+        Explorá cualquier combinación de tick, rate y jugadores (sin límites del servidor).
+      </p>
+      <div class="sliders">
+        <div class="slider-row var-theme">
+          <label for="vTick">Tick rate</label>
+          <span class="val" id="vTickVal">128</span>
+          <input type="range" id="vTick" min="10" max="128" step="1" value="128" />
+          <div class="slider-bounds">
+            <span>10</span>
+            <span>128</span>
+          </div>
+        </div>
+        <div class="slider-row var-theme">
+          <label for="vRate">Rate / packet size</label>
+          <span class="val" id="vRateVal">15.0 KB</span>
+          <input type="range" id="vRate" min="0" max="1000" step="1" value="0" />
+          <div class="slider-bounds">
+            <span>512 B</span>
+            <span>100 GB</span>
+          </div>
+        </div>
+        <div class="slider-row var-theme">
+          <label for="vPlayers">Jugadores</label>
+          <span class="val" id="vPlayersVal">4</span>
+          <input type="range" id="vPlayers" min="1" max="32" step="1" value="4" />
+          <div class="slider-bounds">
+            <span>1</span>
+            <span>32</span>
+          </div>
+        </div>
+      </div>
+      <div class="results" style="margin-top:1.25rem">
+        <div class="result-box var">
+          <div class="label">Total del escenario</div>
+          <div class="combo" id="vCombo">—</div>
+          <div class="value" id="vValue">—</div>
+          <div class="fixed-units" id="vFixed">—</div>
+        </div>
+        <div class="result-box var">
+          <div class="label">Por jugador</div>
+          <div class="combo" id="vComboPP">—</div>
+          <div class="value" id="vValuePP">—</div>
+          <div class="fixed-units" id="vFixedPP">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMULA -->
+    <div class="card">
+      <h2>Fórmula</h2>
+      <div class="formula">
+        Bandwidth (B/s) <span class="op">=</span> Tick Rate <span class="op">×</span> Rate (bytes) <span class="op">×</span> Jugadores<br />
+        <span class="hl-min">MÍNIMO servidor</span> <span class="op">=</span> sv_minupdaterate <span class="op">×</span> sv_minrate <span class="op">×</span> N<br />
+        <span class="hl-max">MÁXIMO servidor</span> <span class="op">=</span> sv_maxupdaterate <span class="op">×</span> sv_maxrate <span class="op">×</span> N
+      </div>
+    </div>
+
+    <footer>
+      Source Engine bandwidth calculator
+      <span>·</span>
+      por Grok
+      <span>·</span>
+      :v
+    </footer>
+  </div>
+
+  <script>
+    function fmt(n) {
+      if (!isFinite(n)) return "—";
+      const s = n.toFixed(2);
+      return s.replace(/\.00$/, "").replace(/(\.[0-9])0$/, "$1");
+    }
+
+    function smart(bytesPerSec) {
+      if (bytesPerSec >= 1e12) return { value: bytesPerSec / 1e12, unit: "TB/s" };
+      if (bytesPerSec >= 1e9)  return { value: bytesPerSec / 1e9,  unit: "GB/s" };
+      if (bytesPerSec >= 1048576) return { value: bytesPerSec / 1048576, unit: "MB/s" };
+      if (bytesPerSec >= 1024) return { value: bytesPerSec / 1024, unit: "KB/s" };
+      return { value: bytesPerSec, unit: "B/s" };
+    }
+
+    function smartStr(b) {
+      const s = smart(b);
+      return fmt(s.value) + " " + s.unit;
+    }
+
+    // Format a byte size (packet size / rate) for display
+    function fmtBytes(b) {
+      if (b >= 1073741824) return fmt(b / 1073741824) + " GB";
+      if (b >= 1048576)    return fmt(b / 1048576) + " MB";
+      if (b >= 1024)       return fmt(b / 1024) + " KB";
+      return Math.round(b) + " B";
+    }
+
+    function num(id) {
+      const v = parseFloat(document.getElementById(id).value);
+      return isFinite(v) && v > 0 ? v : 0;
+    }
+
+    function setText(id, text) {
+      document.getElementById(id).textContent = text;
+    }
+
+    // ---- Logarithmic rate slider (variable section) ----
+    // Slider index 0..1000 maps to 512 B .. 100 GB
+    const RATE_MIN = 512;
+    const RATE_MAX = 100 * 1073741824; // 100 GB
+
+    function rateFromSlider(idx) {
+      const t = idx / 1000;
+      return Math.round(RATE_MIN * Math.pow(RATE_MAX / RATE_MIN, t));
+    }
+
+    function sliderFromRate(bytes) {
+      if (bytes <= RATE_MIN) return 0;
+      if (bytes >= RATE_MAX) return 1000;
+      return Math.round(1000 * Math.log(bytes / RATE_MIN) / Math.log(RATE_MAX / RATE_MIN));
+    }
+
+    function getVarRate() {
+      return rateFromSlider(+document.getElementById("vRate").value);
+    }
+
+    function fillResult(prefix, bytes, comboText, perPlayer) {
+      const s = smart(bytes);
+      setText(prefix + "Combo", comboText);
+      setText(prefix + "Value", fmt(s.value) + " " + s.unit);
+      if (perPlayer !== undefined) {
+        const pp = smart(perPlayer);
+        setText(prefix + "PerPlayer", fmt(pp.value) + " " + pp.unit + " por jugador");
+      }
+      // Fixed units: pick sensible ones for large values
+      let fixed;
+      if (bytes >= 1e9) {
+        fixed = fmt(bytes / 1e9) + " GB/s  ·  " + fmt(bytes * 8 / 1e9) + " Gbps";
+      } else if (bytes >= 1048576) {
+        fixed = fmt(bytes / 1048576) + " MB/s  ·  " + fmt(bytes * 8 / 1e6) + " Mbps";
+      } else {
+        fixed = fmt(bytes / 1024) + " KB/s  ·  " + fmt(bytes / 1048576) + " MB/s  ·  " + fmt(bytes * 8 / 1e6) + " Mbps";
+      }
+      setText(prefix + "Fixed", fixed);
+    }
+
+    function syncPlayerSliders() {
+      const minTick = num("minTick");
+      const maxTick = num("maxTick");
+      const minRate = num("minRate");
+      const maxRate = num("maxRate");
+
+      const pTick = document.getElementById("pTick");
+      const pRate = document.getElementById("pRate");
+
+      const tLo = Math.min(minTick, maxTick) || 1;
+      const tHi = Math.max(minTick, maxTick) || 1;
+      const rLo = Math.min(minRate, maxRate) || 1;
+      const rHi = Math.max(minRate, maxRate) || 1;
+
+      pTick.min = tLo;
+      pTick.max = tHi;
+      if (+pTick.value < tLo) pTick.value = tLo;
+      if (+pTick.value > tHi) pTick.value = tHi;
+
+      pRate.min = rLo;
+      pRate.max = rHi;
+      pRate.step = rHi > 100000 ? 256 : (rHi > 10000 ? 64 : 16);
+      if (+pRate.value < rLo) pRate.value = rLo;
+      if (+pRate.value > rHi) pRate.value = rHi;
+
+      setText("pTickMinLabel", tLo);
+      setText("pTickMaxLabel", tHi);
+      setText("pRateMinLabel", fmtBytes(rLo));
+      setText("pRateMaxLabel", fmtBytes(rHi));
+
+      setText("pTickVal", pTick.value);
+      setText("pRateVal", `${+pRate.value} (${fmtBytes(+pRate.value)})`);
+    }
+
+    function calcServer() {
+      const minTick = num("minTick");
+      const maxTick = num("maxTick");
+      const minRate = num("minRate");
+      const maxRate = num("maxRate");
+      const players = num("players");
+
+      const minBytes = minTick * minRate * players;
+      const maxBytes = maxTick * maxRate * players;
+
+      fillResult("srvMin", minBytes,
+        minTick + " tick × " + fmtBytes(minRate) + " × " + players + "p",
+        minBytes / (players || 1)
+      );
+      fillResult("srvMax", maxBytes,
+        maxTick + " tick × " + fmtBytes(maxRate) + " × " + players + "p",
+        maxBytes / (players || 1)
+      );
+
+      setText("m00", smartStr(minTick * minRate * players));
+      setText("m01", smartStr(minTick * maxRate * players));
+      setText("m10", smartStr(maxTick * minRate * players));
+      setText("m11", smartStr(maxTick * maxRate * players));
+    }
+
+    function calcPlayer() {
+      const tick = num("pTick");
+      const rate = num("pRate");
+      const bytes = tick * rate;
+
+      setText("pTickVal", tick);
+      setText("pRateVal", `${rate} (${fmtBytes(rate)})`);
+
+      fillResult("p", bytes,
+        tick + " tick × " + fmtBytes(rate) + "  (1 jugador)"
+      );
+    }
+
+    function calcVariable() {
+      const tick = num("vTick");
+      const rate = getVarRate();
+      const players = num("vPlayers");
+      const total = tick * rate * players;
+      const pp = tick * rate;
+
+      setText("vTickVal", tick);
+      setText("vRateVal", `${rate} (${fmtBytes(rate)})`);
+      setText("vPlayersVal", players);
+
+      fillResult("v", total,
+        tick + " tick × " + fmtBytes(rate) + " × " + players + "p"
+      );
+
+      const s = smart(pp);
+      setText("vComboPP", tick + " tick × " + fmtBytes(rate));
+      setText("vValuePP", fmt(s.value) + " " + s.unit);
+      let fixedPP;
+      if (pp >= 1e9) {
+        fixedPP = fmt(pp / 1e9) + " GB/s  ·  " + fmt(pp * 8 / 1e9) + " Gbps";
+      } else if (pp >= 1048576) {
+        fixedPP = fmt(pp / 1048576) + " MB/s  ·  " + fmt(pp * 8 / 1e6) + " Mbps";
+      } else {
+        fixedPP = fmt(pp / 1024) + " KB/s  ·  " + fmt(pp / 1048576) + " MB/s  ·  " + fmt(pp * 8 / 1e6) + " Mbps";
+      }
+      setText("vFixedPP", fixedPP);
+    }
+
+    function recalcAll() {
+      syncPlayerSliders();
+      calcServer();
+      calcPlayer();
+      calcVariable();
+    }
+
+    ["minTick", "maxTick", "minRate", "maxRate", "players"].forEach(function(id) {
+      document.getElementById(id).addEventListener("input", recalcAll);
+    });
+
+    ["pTick", "pRate"].forEach(function(id) {
+      document.getElementById(id).addEventListener("input", calcPlayer);
+    });
+
+    ["vTick", "vRate", "vPlayers"].forEach(function(id) {
+      document.getElementById(id).addEventListener("input", calcVariable);
+    });
+
+    // Init variable rate slider to ~15 KB
+    document.getElementById("vRate").value = sliderFromRate(15360);
+
+    recalcAll();
+
+    // Defaults at maximum: player tick/rate → server max
+    document.getElementById("pTick").value = document.getElementById("pTick").max;
+    document.getElementById("pRate").value = document.getElementById("pRate").max;
+    calcPlayer();
+
+    // Variable defaults at max tick
+    document.getElementById("vTick").value = document.getElementById("vTick").max;
+    calcVariable();
+  </script>
+</body>
+</html>
